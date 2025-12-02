@@ -14,6 +14,7 @@ export interface Vehicle {
   observaciones: string | null;
   created_at?: string;
   updated_at?: string;
+  deleted_at?: string | null;
 }
 
 export interface VehicleDocument {
@@ -36,4 +37,13 @@ export interface Quote {
   estado: QuoteStatus;
   notas: string | null;
   created_at?: string;
+}
+
+export interface VehicleLog {
+  id: string;
+  vehicle_id: string;
+  action: string;
+  description: string | null;
+  diff: Record<string, any> | null;
+  created_at: string;
 }

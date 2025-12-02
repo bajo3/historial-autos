@@ -5,7 +5,7 @@ import type { Vehicle } from '../types';
 import MetricsBar from '../components/MetricsBar';
 import VehicleForm from '../components/VehicleForm';
 
-type StatusFilter = 'all' | 'en_stock' | 'vendido' | 'retirado';
+type StatusFilter = 'all' | 'en_stock' | 'vendido' | 'retirado' | 'trash';
 
 function getDaysInStock(vehicle: Vehicle): number | null {
   if (!vehicle.fecha_ingreso) return null;
@@ -81,11 +81,45 @@ const VehiclesList: React.FC = () => {
     await loadVehicles();
   };
 
+  const handleRestoreVehicle = async (vehicleId: string) => {
+    const { error } = await supabase
+      .from('vehicles')
+      .update({ deleted_at: null })
+      .eq('id', vehicleId);
+
+    if (error) {
+      console.error(error);
+      alert('Error restaurando auto desde la papelera');
+      return;
+    }
+
+    // Log simple
+    const { error: logError } = await supabase.from('vehicle_logs').insert({
+      vehicle_id: vehicleId,
+      action: 'restore',
+      description: 'Vehículo restaurado desde la papelera',
+      diff: null,
+    });
+
+    if (logError) {
+      console.error('[vehicle_logs] Error insertando log de restore', logError);
+    }
+
+    await loadVehicles();
+  };
+
   const filteredVehicles = useMemo(() => {
     let list = vehicles;
 
-    if (statusFilter !== 'all') {
-      list = list.filter((v) => v.estado === statusFilter);
+    if (statusFilter === 'trash') {
+      list = list.filter((v) => v.deleted_at);
+    } else {
+      // solo vehículos NO eliminados
+      list = list.filter((v) => !v.deleted_at);
+
+      if (statusFilter !== 'all') {
+        list = list.filter((v) => v.estado === statusFilter);
+      }
     }
 
     if (searchTerm.trim()) {
@@ -94,15 +128,21 @@ const VehiclesList: React.FC = () => {
         const patente = (v.patente || '').toLowerCase();
         const marca = v.marca.toLowerCase();
         const modelo = v.modelo.toLowerCase();
-        return patente.includes(q) || marca.includes(q) || modelo.includes(q);
+        return (
+          patente.includes(q) ||
+          marca.includes(q) ||
+          modelo.includes(q)
+        );
       });
     }
 
     return list;
   }, [vehicles, statusFilter, searchTerm]);
 
-  const renderStatusLabel = (status: Vehicle['estado']) => {
-    switch (status) {
+  const renderStatusLabel = (v: Vehicle) => {
+    if (v.deleted_at) return 'En papelera';
+
+    switch (v.estado) {
       case 'en_stock':
         return 'En stock';
       case 'vendido':
@@ -110,7 +150,7 @@ const VehiclesList: React.FC = () => {
       case 'retirado':
         return 'Retirado';
       default:
-        return status;
+        return v.estado;
     }
   };
 
@@ -122,22 +162,26 @@ const VehiclesList: React.FC = () => {
 
       <div className="filter-row">
         <span className="filter-label">Filtrar por estado:</span>
-        {(['all', 'en_stock', 'vendido', 'retirado'] as StatusFilter[]).map((v) => (
-          <button
-            key={v}
-            type="button"
-            className={`filter-chip ${statusFilter === v ? 'active' : ''}`}
-            onClick={() => setStatusFilter(v)}
-          >
-            {v === 'all'
-              ? 'Todos'
-              : v === 'en_stock'
-              ? 'En stock'
-              : v === 'vendido'
-              ? 'Vendidos'
-              : 'Retirados'}
-          </button>
-        ))}
+        {(['all', 'en_stock', 'vendido', 'retirado', 'trash'] as StatusFilter[]).map(
+          (v) => (
+            <button
+              key={v}
+              type="button"
+              className={`filter-chip ${statusFilter === v ? 'active' : ''}`}
+              onClick={() => setStatusFilter(v)}
+            >
+              {v === 'all'
+                ? 'Todos'
+                : v === 'en_stock'
+                ? 'En stock'
+                : v === 'vendido'
+                ? 'Vendidos'
+                : v === 'retirado'
+                ? 'Retirados'
+                : 'Papelera'}
+            </button>
+          )
+        )}
 
         <div style={{ flex: 1 }} />
 
@@ -186,6 +230,7 @@ const VehiclesList: React.FC = () => {
           <tbody>
             {filteredVehicles.map((v) => {
               const days = getDaysInStock(v);
+              const isInTrash = !!v.deleted_at;
               return (
                 <tr key={v.id}>
                   <td>{v.patente || '-'}</td>
@@ -198,23 +243,48 @@ const VehiclesList: React.FC = () => {
                       ? `$ ${v.precio_publicado.toLocaleString('es-AR')}`
                       : '-'}
                   </td>
-                  <td>{renderStatusLabel(v.estado)}</td>
+                  <td>{renderStatusLabel(v)}</td>
                   <td>{v.fecha_ingreso}</td>
                   <td>{v.fecha_egreso || '-'}</td>
                   <td>{days !== null ? `${days} d` : '—'}</td>
                   <td>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <Link to={`/vehicles/${v.id}`} style={{ fontSize: 13 }}>
-                        Ver detalle
-                      </Link>
-                      {v.estado === 'en_stock' && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 4,
+                      }}
+                    >
+                      {!isInTrash ? (
+                        <>
+                          <Link
+                            to={`/vehicles/${v.id}`}
+                            style={{ fontSize: 13 }}
+                          >
+                            Ver detalle
+                          </Link>
+                          {v.estado === 'en_stock' && (
+                            <button
+                              type="button"
+                              onClick={() => handleMarkSoldToday(v.id)}
+                              className="btn-secondary"
+                              style={{
+                                fontSize: 11,
+                                padding: '4px 8px',
+                              }}
+                            >
+                              Marcar vendido hoy
+                            </button>
+                          )}
+                        </>
+                      ) : (
                         <button
                           type="button"
-                          onClick={() => handleMarkSoldToday(v.id)}
+                          onClick={() => handleRestoreVehicle(v.id)}
                           className="btn-secondary"
                           style={{ fontSize: 11, padding: '4px 8px' }}
                         >
-                          Marcar vendido hoy
+                          Restaurar
                         </button>
                       )}
                     </div>
