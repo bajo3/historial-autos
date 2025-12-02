@@ -302,4 +302,28 @@ a:hover { text-decoration: underline; }
     width: 100%;
     max-width: none;
   }
+    .vehicle-form {
+    gap: 10px;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+
+  .form-row > * {
+    width: 100% !important;
+  }
+
+}
+
+.vehicle-form {
+  display: grid;
+  gap: 8px;
+}
+
+.form-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  flex-wrap: wrap;
 }

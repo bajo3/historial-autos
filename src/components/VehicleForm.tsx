@@ -48,8 +48,9 @@ const VehicleForm: React.FC<Props> = ({ initial, onSubmit, mode = 'create' }) =>
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 8 }}>
-      <div style={{ display: 'flex', gap: 8 }}>
+    <form onSubmit={handleSubmit} className="vehicle-form">
+      {/* Fila 1: Marca / Modelo */}
+      <div className="form-row">
         <input
           required
           placeholder="Marca"
@@ -66,7 +67,8 @@ const VehicleForm: React.FC<Props> = ({ initial, onSubmit, mode = 'create' }) =>
         />
       </div>
 
-      <div style={{ display: 'flex', gap: 8 }}>
+      {/* Fila 2: Patente / Año / Precio */}
+      <div className="form-row">
         <input
           placeholder="Patente"
           value={values.patente || ''}
@@ -89,7 +91,8 @@ const VehicleForm: React.FC<Props> = ({ initial, onSubmit, mode = 'create' }) =>
         />
       </div>
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {/* Fila 3: Fechas + Estado */}
+      <div className="form-row">
         <label style={{ fontSize: 12 }}>
           Fecha ingreso:
           <input
@@ -122,6 +125,7 @@ const VehicleForm: React.FC<Props> = ({ initial, onSubmit, mode = 'create' }) =>
         </select>
       </div>
 
+      {/* Observaciones */}
       <textarea
         placeholder="Observaciones"
         value={values.observaciones || ''}
@@ -129,7 +133,12 @@ const VehicleForm: React.FC<Props> = ({ initial, onSubmit, mode = 'create' }) =>
         style={{ minHeight: 60 }}
       />
 
-      <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: 4 }}>
+      <button
+        type="submit"
+        disabled={loading}
+        className="btn-primary"
+        style={{ marginTop: 4 }}
+      >
         {loading ? 'Guardando...' : mode === 'create' ? 'Agregar auto' : 'Guardar cambios'}
       </button>
     </form>
