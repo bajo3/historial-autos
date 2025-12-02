@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import type { Vehicle, VehicleDocument } from '../types';
 import VehicleForm from '../components/VehicleForm';
@@ -7,6 +7,8 @@ import DocumentUpload from '../components/DocumentUpload';
 
 const VehicleDetail: React.FC = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [docs, setDocs] = useState<VehicleDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,6 +76,61 @@ const VehicleDetail: React.FC = () => {
     await loadData();
   };
 
+  const handleDeleteVehicle = async () => {
+    if (!vehicle) return;
+
+    const confirmed = window.confirm(
+      '¿Seguro que querés eliminar este auto? Esta acción no se puede deshacer.'
+    );
+    if (!confirmed) return;
+
+    try {
+      // 1) Borrar documentos del storage (si hay)
+      if (docs.length > 0) {
+        const paths = docs.map((d) => d.file_path);
+        const { error: storageError } = await supabase.storage
+          .from('vehicle_docs')
+          .remove(paths);
+
+        if (storageError) {
+          console.error(storageError);
+          alert('Error borrando documentos del storage (revisá la consola).');
+          // Podés decidir seguir o no; acá sigo.
+        }
+      }
+
+      // 2) Borrar documentos de la tabla
+      const { error: docsError } = await supabase
+        .from('vehicle_documents')
+        .delete()
+        .eq('vehicle_id', vehicle.id);
+
+      if (docsError) {
+        console.error(docsError);
+        alert('Error borrando documentos asociados al auto.');
+        return;
+      }
+
+      // 3) Borrar el vehículo
+      const { error: vehicleError } = await supabase
+        .from('vehicles')
+        .delete()
+        .eq('id', vehicle.id);
+
+      if (vehicleError) {
+        console.error(vehicleError);
+        alert('Error borrando el auto.');
+        return;
+      }
+
+      alert('Auto eliminado correctamente');
+      navigate('/vehicles');
+    } catch (err) {
+      console.error(err);
+      alert('Ocurrió un error inesperado al eliminar el auto.');
+    }
+  };
+
   const getPublicUrl = (filePath: string) => {
     const { data } = supabase.storage.from('vehicle_docs').getPublicUrl(filePath);
     return data.publicUrl;
@@ -104,6 +161,26 @@ const VehicleDetail: React.FC = () => {
         <div className="card">
           <h3 style={{ marginTop: 0, marginBottom: 8 }}>Datos del auto</h3>
           <VehicleForm initial={vehicle} onSubmit={handleUpdateVehicle} mode="edit" />
+
+          {/* Botón para eliminar el auto */}
+          <div style={{ marginTop: 12 }}>
+            <button
+              type="button"
+              onClick={handleDeleteVehicle}
+              className="btn-danger"
+              style={{
+                background: '#dc2626',
+                color: '#fff',
+                padding: '6px 10px',
+                borderRadius: 6,
+                fontSize: 13,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              🗑 Eliminar auto
+            </button>
+          </div>
         </div>
 
         <div className="card">
