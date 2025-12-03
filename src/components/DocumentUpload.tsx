@@ -62,10 +62,11 @@ const DocumentUpload: React.FC<Props> = ({ vehicleId, onUploaded }) => {
       />
       <input
         type="file"
-        accept="application/pdf"
+        accept="application/pdf,image/*"
         onChange={(e) => setFile(e.target.files?.[0] || null)}
         style={{ maxWidth: 260, fontSize: 12 }}
       />
+
       <button type="submit" disabled={loading} className="btn-secondary">
         {loading ? 'Subiendo...' : 'Subir'}
       </button>

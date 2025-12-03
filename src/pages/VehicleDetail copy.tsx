@@ -266,8 +266,6 @@ const VehicleDetail: React.FC = () => {
             {docs.map((d) => {
               const url = getPublicUrl(d.file_path);
               const fecha = new Date(d.uploaded_at).toLocaleDateString('es-AR');
-              const isActivePreview = previewDoc?.id === d.id;   // 👉 VA ACÁ
-
               return (
                 <li key={d.id} style={{ marginBottom: 8 }}>
                   <div
@@ -305,11 +303,11 @@ const VehicleDetail: React.FC = () => {
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button
                           type="button"
-                          onClick={() => setPreviewDoc(isActivePreview ? null : d)}
+                          onClick={() => setPreviewDoc(d)}
                           className="btn-secondary"
                           style={{ padding: '2px 8px', fontSize: 12 }}
                         >
-                          {isActivePreview ? 'Ocultar' : 'Ver aquí'}
+                          Ver aquí
                         </button>
                         <button
                           type="button"
@@ -328,34 +326,10 @@ const VehicleDetail: React.FC = () => {
                 </li>
               );
             })}
-
           </ul>
 
           {previewDoc && (
             <div className="pdf-preview">
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '4px 8px',
-                  borderBottom: '1px solid var(--border-subtle)',
-                  fontSize: 12,
-                }}
-              >
-                <span>
-                  Vista previa: <strong>{previewDoc.tipo}</strong>
-                </span>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  style={{ padding: '2px 8px', fontSize: 11 }}
-                  onClick={() => setPreviewDoc(null)}
-                >
-                  Cerrar vista previa
-                </button>
-              </div>
-
               {previewDoc.file_path.toLowerCase().endsWith('.pdf') ? (
                 <iframe
                   src={getPublicUrl(previewDoc.file_path)}
@@ -370,8 +344,6 @@ const VehicleDetail: React.FC = () => {
               )}
             </div>
           )}
-
-
 
         </div>
       </div>
